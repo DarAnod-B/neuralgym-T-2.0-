@@ -1,7 +1,7 @@
 """ layers """
 import numpy as np
-import tensorflow as tf
-
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()    
 from tensorflow.python.training.moving_averages import assign_moving_average
 from tensorflow.python.ops import control_flow_ops
 
@@ -90,8 +90,8 @@ def moving_average_var(x, decay=0.99, initial_value=0.,
 
 
 def depthwise_conv2d(x, ksize=3, stride=1, decay=0.0, biased=True, relu=False,
-         activation_fn=None, w_init=tf.contrib.layers.xavier_initializer_conv2d(),
-         padding='SAME', name='depthwise_conv2d'):
+                     activation_fn=None, w_init=tf.keras.initializers.GlorotUniform(), # Изменение здесь
+                     padding='SAME', name='depthwise_conv2d'):  
     """Simple wrapper for convolution layer.
     Padding can be 'SAME', 'VALID', 'REFLECT', 'SYMMETRIC'
     """
@@ -490,8 +490,6 @@ def scaled_elu(x, name='scaled_elu'):
 
 
 def flatten(x, name='flatten'):
-    """Flatten wrapper.
-
-    """
-    with tf.variable_scope(name):
-        return tf.contrib.layers.flatten(x)
+    """Flatten wrapper."""
+    with tf.compat.v1.variable_scope(name):  
+        return tf.keras.layers.Flatten()(x)  

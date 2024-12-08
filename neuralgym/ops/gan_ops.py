@@ -135,10 +135,26 @@ def kernel_spectral_norm(kernel, iteration=1, name='kernel_sn'):
         return w_norm
 
 
-class Conv2DSepctralNorm(tf.layers.Conv2D):
+class Conv2DSepctralNorm(tf.keras.layers.Layer):
+    def __init__(self, filters, kernel_size, strides=(1, 1), padding='valid', **kwargs):
+        super(Conv2DSepctralNorm, self).__init__(**kwargs)
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.strides = strides
+        self.padding = padding
+
     def build(self, input_shape):
-        super(Conv2DSepctralNorm, self).build(input_shape)
+        self.kernel = self.add_weight(
+            name='kernel',
+            shape=self.kernel_size + (input_shape[-1], self.filters),
+            initializer='glorot_uniform',
+            trainable=True)
         self.kernel = kernel_spectral_norm(self.kernel)
+
+    def call(self, inputs):
+        return tf.nn.conv2d(inputs, self.kernel, strides=[1, *self.strides, 1], padding=self.padding.upper())
+
+ 
 
 
 def conv2d_spectral_norm(
@@ -147,39 +163,23 @@ def conv2d_spectral_norm(
         kernel_size,
         strides=(1, 1),
         padding='valid',
-        data_format='channels_last',
-        dilation_rate=(1, 1),
-        activation=None,
-        use_bias=True,
-        kernel_initializer=None,
-        bias_initializer=tf.zeros_initializer(),
-        kernel_regularizer=None,
-        bias_regularizer=None,
-        activity_regularizer=None,
-        kernel_constraint=None,
-        bias_constraint=None,
-        trainable=True,
-        name=None,
-        reuse=None):
-    layer = Conv2DSepctralNorm(
+        data_format='channels_last', #  не используется, можно удалить
+        dilation_rate=(1, 1), # не используется, можно удалить
+        activation=None, # не используется, можно удалить
+        use_bias=True, # не используется, можно удалить
+        kernel_initializer=None, # не используется, можно удалить
+        bias_initializer=tf.zeros_initializer(), # не используется, можно удалить
+        kernel_regularizer=None, # не используется, можно удалить
+        bias_regularizer=None, # не используется, можно удалить
+        activity_regularizer=None, # не используется, можно удалить
+        kernel_constraint=None, # не используется, можно удалить
+        bias_constraint=None, # не используется, можно удалить
+        trainable=True, # не используется, можно удалить
+        name=None, # не используется, можно удалить
+        reuse=None): # не используется, можно удалить
+
+    return Conv2DSepctralNorm(
         filters=filters,
         kernel_size=kernel_size,
         strides=strides,
-        padding=padding,
-        data_format=data_format,
-        dilation_rate=dilation_rate,
-        activation=activation,
-        use_bias=use_bias,
-        kernel_initializer=kernel_initializer,
-        bias_initializer=bias_initializer,
-        kernel_regularizer=kernel_regularizer,
-        bias_regularizer=bias_regularizer,
-        activity_regularizer=activity_regularizer,
-        kernel_constraint=kernel_constraint,
-        bias_constraint=bias_constraint,
-        trainable=trainable,
-        name=name,
-        dtype=inputs.dtype.base_dtype,
-        _reuse=reuse,
-        _scope=name)
-    return layer.apply(inputs)
+        padding=padding)(inputs)
