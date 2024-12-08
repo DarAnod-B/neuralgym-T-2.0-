@@ -1,4 +1,5 @@
 """HyperParamScheduler"""
+
 import tensorflow as tf
 
 from . import ScheduledCallback, CallbackLoc
@@ -25,18 +26,19 @@ class HyperParamScheduler(ScheduledCallback):
             scope=None,
         )
     """
-    def __init__(self, param_name, schedule, scope=None,
-                 cb_loc=CallbackLoc.step_end):
+
+    def __init__(self, param_name, schedule, scope=None, cb_loc=CallbackLoc.step_end):
         super().__init__(cb_loc, schedule)
         if scope is None:
             scope = tf.get_variable_scope()
-        with tf.variable_scope(scope, reuse=True):
+        with tf.name_scope(scope, reuse=True):
             self._param = tf.get_variable(param_name)
-        scalar_summary('hyper_param_scheduler/'+param_name, self._param)
+        scalar_summary("hyper_param_scheduler/" + param_name, self._param)
 
     def run(self, sess, step):
         callback_log(
-            'Trigger HyperParamScheduler callback at Step-%d: update '
-            'hyper parameters of %s: %s' % (
-                step, self._param.name[:-2], self.schedule[step]))
+            "Trigger HyperParamScheduler callback at Step-%d: update "
+            "hyper parameters of %s: %s"
+            % (step, self._param.name[:-2], self.schedule[step])
+        )
         sess.run(self._param.assign(self.schedule[step]))

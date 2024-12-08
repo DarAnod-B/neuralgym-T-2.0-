@@ -1,4 +1,5 @@
 """Class for multi-GPU trainer."""
+
 import logging
 import threading
 
@@ -20,20 +21,19 @@ class MultiGPUTrainer(Trainer):
 
     def __init__(self, **context):
         self.context = context
-        self.context['async_train'] = context.pop('async_train', False)
+        self.context["async_train"] = context.pop("async_train", False)
         self._train_op, self._loss = self.train_ops_and_losses()
         super().__init__(**self.context)
 
     def train(self):
-        """Start training with callbacks.
+        """Start training with callbacks."""
 
-        """
         def train_function(sess, train_op):
             """"""
             while True:
                 sess.run(train_op)
 
-        if self.context['async_train']:
+        if self.context["async_train"]:
             train_threads = []
             for i, train_op in enumerate(self._train_op):
                 if i == 0:
@@ -42,8 +42,13 @@ class MultiGPUTrainer(Trainer):
                 else:
                     train_threads.append(
                         threading.Thread(
-                            target=train_function, args=(
-                                self.context['sess'], train_op,)))
+                            target=train_function,
+                            args=(
+                                self.context["sess"],
+                                train_op,
+                            ),
+                        )
+                    )
             # Start the threads, and block on their completion.
             try:
                 for t in train_threads:
@@ -59,37 +64,34 @@ class MultiGPUTrainer(Trainer):
             super().train()
 
     def train_ops_and_losses(self):
-        optimizer = self.context['optimizer']
-        loss = self.context.get('loss')
-        var_list = self.context.get('var_list')
-        graph_def_kwargs = self.context['graph_def_kwargs']
-        gradient_processor = self.context.get('gradient_processor')
+        optimizer = self.context["optimizer"]
+        loss = self.context.get("loss")
+        var_list = self.context.get("var_list")
+        graph_def_kwargs = self.context["graph_def_kwargs"]
+        gradient_processor = self.context.get("gradient_processor")
         tower_grads = []
         tower_losses = []
-        for gpu in range(self.context.get('num_gpus')):
-            with tf.device('/gpu:%d' % gpu):
+        for gpu in range(self.context.get("num_gpus")):
+            with tf.device("/gpu:%d" % gpu):
                 # with tf.name_scope('tower_gpu%d' % gpu) as scope:
                 # Reuse variables for the next tower.
-                with tf.variable_scope(tf.get_variable_scope(), reuse=True):
-                    loss = self.context['graph_def'](
-                        gpu_id=gpu, **graph_def_kwargs)
+                with tf.name_scope(tf.get_variable_scope(), reuse=True):
+                    loss = self.context["graph_def"](gpu_id=gpu, **graph_def_kwargs)
                     tower_losses.append(loss)
                     # Calculate the gradients for the batch of data
                     grads = optimizer.compute_gradients(loss, var_list)
-                    if self.context['grads_summary']:
+                    if self.context["grads_summary"]:
                         for grad, var in grads:
                             if grad is not None:
-                                tf.summary.histogram(
-                                    'gradients/' + var.name, grad)
+                                tf.summary.histogram("gradients/" + var.name, grad)
                     grads = process_gradients(grads, gradient_processor)
                     tower_grads.append(grads)
 
-        if self.context['async_train']:
+        if self.context["async_train"]:
             apply_gradient_op = []
             loss = tower_losses[0]  # only monitor loss of first tower
             for i in range(len(tower_grads)):
-                apply_gradient_op.append(
-                    optimizer.apply_gradients(tower_grads[i]))
+                apply_gradient_op.append(optimizer.apply_gradients(tower_grads[i]))
         else:
             # average gradients.
             grads = average_gradients(tower_grads)
